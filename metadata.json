@@ -1,0 +1,5 @@
+{
+  "name": "BioSnake: Ultra-Realistic Simulation",
+  "description": "A high-fidelity snake simulation with organic physics, procedural animations, and AI-driven biological commentary using Gemini.",
+  "requestFramePermissions": []
+}
