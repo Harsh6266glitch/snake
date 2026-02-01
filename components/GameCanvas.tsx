@@ -25,13 +25,12 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
   const mousePos = useRef({ x: window.innerWidth / 2, y: window.innerHeight / 2 });
   const requestRef = useRef<number>();
   const stateRef = useRef<GameState>(gameState);
+  const frameCount = useRef(0);
 
-  // Sync ref with state
   useEffect(() => {
     stateRef.current = gameState;
   }, [gameState]);
 
-  // Handle inputs
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
       mousePos.current = { x: e.clientX, y: e.clientY };
@@ -51,33 +50,29 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
 
   const update = useCallback(() => {
     if (stateRef.current.isGameOver) return;
+    frameCount.current++;
 
     const { snake, food, speed, score, length } = stateRef.current;
     const newSnake = [...snake];
     const head = { ...newSnake[0] };
 
-    // 1. Calculate target angle based on mouse
     const dx = mousePos.current.x - head.x;
     const dy = mousePos.current.y - head.y;
     const targetAngle = Math.atan2(dy, dx);
 
-    // 2. Smooth turn logic
     let diff = targetAngle - head.angle;
     while (diff < -Math.PI) diff += Math.PI * 2;
     while (diff > Math.PI) diff -= Math.PI * 2;
     head.angle += diff * TURN_SPEED;
 
-    // 3. Move head
     head.x += Math.cos(head.angle) * speed;
     head.y += Math.sin(head.angle) * speed;
 
-    // 4. Boundary check
     if (head.x < 0 || head.x > window.innerWidth || head.y < 0 || head.y > window.innerHeight) {
       onGameOver(score, length);
       return;
     }
 
-    // 5. Update segments (follow logic)
     newSnake[0] = head;
     for (let i = 1; i < newSnake.length; i++) {
       const prev = newSnake[i - 1];
@@ -94,7 +89,6 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
       }
     }
 
-    // 6. Food collision
     let newFood = [...food];
     let newScore = score;
     let newLength = length;
@@ -109,22 +103,20 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
       const eaten = newFood[collisionFoodIdx];
       newScore += eaten.value;
       newLength += 2;
-      newSpeed = GAME_SPEED_BASE + (newLength / 100);
+      newSpeed = GAME_SPEED_BASE + (newLength / 120);
       newFood.splice(collisionFoodIdx, 1);
       newFood.push(generateFood());
 
-      // Grow snake body
       const last = newSnake[newSnake.length - 1];
       for (let i = 0; i < 2; i++) {
         newSnake.push({ ...last });
       }
     }
 
-    // 7. Self collision (head with body, skip first few segments)
-    for (let i = 20; i < newSnake.length; i++) {
+    for (let i = 30; i < newSnake.length; i++) {
         const seg = newSnake[i];
         const dist = Math.sqrt((head.x - seg.x)**2 + (head.y - seg.y)**2);
-        if (dist < 10) {
+        if (dist < 12) {
             onGameOver(newScore, newLength);
             return;
         }
@@ -150,100 +142,123 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
     if (!ctx) return;
 
     const { snake, food } = stateRef.current;
+    const time = frameCount.current;
 
-    // Clear background
+    // Background Layer
     ctx.fillStyle = COLORS.background;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    // Subtle Grid/Environment
-    ctx.strokeStyle = '#ffffff08';
-    ctx.lineWidth = 1;
-    for(let i=0; i<canvas.width; i+=100) { ctx.beginPath(); ctx.moveTo(i,0); ctx.lineTo(i, canvas.height); ctx.stroke(); }
-    for(let j=0; j<canvas.height; j+=100) { ctx.beginPath(); ctx.moveTo(0,j); ctx.lineTo(canvas.width, j); ctx.stroke(); }
+    // Organic Atmosphere: Dust/Cells
+    ctx.globalAlpha = 0.15;
+    for (let i = 0; i < 5; i++) {
+        const x = (Math.sin(time * 0.001 + i) * 0.5 + 0.5) * canvas.width;
+        const y = (Math.cos(time * 0.0015 + i) * 0.5 + 0.5) * canvas.height;
+        ctx.fillStyle = COLORS.accent;
+        ctx.beginPath();
+        ctx.arc(x, y, 100 + i * 20, 0, Math.PI * 2);
+        ctx.fill();
+    }
+    ctx.globalAlpha = 1.0;
 
-    // Draw Food
+    // Subtle Environment Grid
+    ctx.strokeStyle = 'rgba(16, 185, 129, 0.05)';
+    ctx.lineWidth = 1;
+    const gridSpacing = 80;
+    for(let i=0; i<canvas.width; i+=gridSpacing) { ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, canvas.height); ctx.stroke(); }
+    for(let j=0; j<canvas.height; j+=gridSpacing) { ctx.beginPath(); ctx.moveTo(0, j); ctx.lineTo(canvas.width, j); ctx.stroke(); }
+
+    // Draw Food with Bobbing
     food.forEach(f => {
+      const bob = Math.sin(time * 0.05 + f.x) * 3;
       ctx.save();
-      ctx.translate(f.x, f.y);
+      ctx.translate(f.x, f.y + bob);
       
-      // Shadow/Glow
-      const gradient = ctx.createRadialGradient(0, 0, 0, 0, 0, 15);
-      gradient.addColorStop(0, f.color + '88');
+      const gradient = ctx.createRadialGradient(0, 0, 0, 0, 0, 20);
+      gradient.addColorStop(0, f.color + '66');
       gradient.addColorStop(1, 'transparent');
       ctx.fillStyle = gradient;
       ctx.beginPath();
-      ctx.arc(0, 0, 15, 0, Math.PI * 2);
+      ctx.arc(0, 0, 20, 0, Math.PI * 2);
       ctx.fill();
 
-      // Food core
       ctx.fillStyle = f.color;
       ctx.beginPath();
-      ctx.arc(0, 0, 8, 0, Math.PI * 2);
+      ctx.arc(0, 0, 7, 0, Math.PI * 2);
       ctx.fill();
 
-      // Highlight
-      ctx.fillStyle = 'rgba(255,255,255,0.4)';
+      // Reflective spot
+      ctx.fillStyle = 'white';
+      ctx.globalAlpha = 0.6;
       ctx.beginPath();
       ctx.arc(-2, -2, 2, 0, Math.PI * 2);
       ctx.fill();
-      
       ctx.restore();
     });
 
-    // Draw Snake
-    // Draw body segments back to front for layering
+    // Draw Snake with Scale Textures
     for (let i = snake.length - 1; i >= 0; i--) {
       const seg = snake[i];
       const isHead = i === 0;
-      const size = isHead ? 15 : Math.max(8, 14 - (i / snake.length) * 10);
+      const progress = i / snake.length;
+      const size = isHead ? 16 : Math.max(7, 15 * (1 - progress * 0.6));
       
       ctx.save();
       ctx.translate(seg.x, seg.y);
       ctx.rotate(seg.angle);
 
-      // Organic gradient for scaly look
-      const bodyGrad = ctx.createLinearGradient(0, -size, 0, size);
+      // Procedural Scale Texture
+      const bodyGrad = ctx.createRadialGradient(0, 0, 0, 0, 0, size);
       bodyGrad.addColorStop(0, COLORS.snakeBody);
-      bodyGrad.addColorStop(0.5, COLORS.snakeHead);
+      bodyGrad.addColorStop(0.7, COLORS.snakeHead);
       bodyGrad.addColorStop(1, COLORS.snakeUnderbelly);
 
       ctx.fillStyle = bodyGrad;
       
-      // Draw segment shadow
-      ctx.shadowBlur = isHead ? 15 : 5;
-      ctx.shadowColor = 'rgba(0,0,0,0.5)';
+      // Shadow
+      ctx.shadowBlur = 10;
+      ctx.shadowColor = 'rgba(0,0,0,0.6)';
       ctx.shadowOffsetY = 4;
 
-      // Realistic segment shape (slightly oval)
       ctx.beginPath();
       if (isHead) {
-        ctx.ellipse(0, 0, size + 4, size, 0, 0, Math.PI * 2);
+        ctx.ellipse(2, 0, size + 4, size, 0, 0, Math.PI * 2);
       } else {
         ctx.arc(0, 0, size, 0, Math.PI * 2);
       }
       ctx.fill();
 
-      // Details for head
-      if (isHead) {
-        // Eyes
-        ctx.fillStyle = 'white';
-        ctx.beginPath(); ctx.arc(8, -5, 4, 0, Math.PI * 2); ctx.fill();
-        ctx.beginPath(); ctx.arc(8, 5, 4, 0, Math.PI * 2); ctx.fill();
-        
-        ctx.fillStyle = 'black';
-        ctx.beginPath(); ctx.arc(10, -5, 2, 0, Math.PI * 2); ctx.fill();
-        ctx.beginPath(); ctx.arc(10, 5, 2, 0, Math.PI * 2); ctx.fill();
+      // Add "Scales" visual noise
+      if (!isHead && i % 2 === 0) {
+          ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.arc(0, 0, size * 0.8, -0.5, 0.5);
+          ctx.stroke();
+      }
 
-        // Tongue (flickers occasionally)
-        if (Math.sin(Date.now() / 100) > 0.8) {
-            ctx.strokeStyle = '#f43f5e';
-            ctx.lineWidth = 2;
+      if (isHead) {
+        // High-fidelity Eyes
+        ctx.fillStyle = '#ffef00';
+        ctx.beginPath(); ctx.arc(8, -6, 4.5, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(8, 6, 4.5, 0, Math.PI * 2); ctx.fill();
+        
+        // Pupils (vertical like a snake)
+        ctx.fillStyle = 'black';
+        ctx.beginPath(); ctx.ellipse(10, -6, 4, 1.5, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.ellipse(10, 6, 4, 1.5, 0, 0, Math.PI * 2); ctx.fill();
+
+        // Flickering Tongue
+        const distToFood = food.some(f => Math.sqrt((seg.x-f.x)**2 + (seg.y-f.y)**2) < 150);
+        if (time % 60 < (distToFood ? 25 : 10)) {
+            ctx.strokeStyle = '#e11d48';
+            ctx.lineWidth = 2.5;
             ctx.beginPath();
-            ctx.moveTo(15, 0);
-            ctx.lineTo(25, 0);
-            ctx.lineTo(28, -3);
-            ctx.moveTo(25, 0);
-            ctx.lineTo(28, 3);
+            ctx.moveTo(18, 0);
+            const tongueLen = distToFood ? 18 : 10;
+            ctx.lineTo(18 + tongueLen, 0);
+            ctx.lineTo(18 + tongueLen + 4, -4);
+            ctx.moveTo(18 + tongueLen, 0);
+            ctx.lineTo(18 + tongueLen + 4, 4);
             ctx.stroke();
         }
       }
@@ -253,13 +268,17 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
   }, []);
 
   useEffect(() => {
-    const canvas = canvasRef.current;
-    if (canvas) {
-      canvas.width = window.innerWidth;
-      canvas.height = window.innerHeight;
-    }
+    const handleResize = () => {
+      if (canvasRef.current) {
+        canvasRef.current.width = window.innerWidth;
+        canvasRef.current.height = window.innerHeight;
+      }
+    };
+    handleResize();
+    window.addEventListener('resize', handleResize);
     requestRef.current = requestAnimationFrame(update);
     return () => {
+      window.removeEventListener('resize', handleResize);
       if (requestRef.current) cancelAnimationFrame(requestRef.current);
     };
   }, [update]);
@@ -267,7 +286,7 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
   return (
     <canvas 
       ref={canvasRef} 
-      className="block cursor-none"
+      className="block cursor-none touch-none"
     />
   );
 };

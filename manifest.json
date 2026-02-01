@@ -1,0 +1,18 @@
+
+{
+  "short_name": "BioSnake",
+  "name": "BioSnake: Biological Simulation",
+  "icons": [
+    {
+      "src": "https://fonts.gstatic.com/s/i/short-term/release/googlesymbols/pet_supplies/default/48px.svg",
+      "type": "image/svg+xml",
+      "sizes": "48x48 72x72 96x96 128x128 256x256 512x512"
+    }
+  ],
+  "start_url": "/",
+  "background_color": "#050505",
+  "display": "standalone",
+  "scope": "/",
+  "theme_color": "#10b981",
+  "description": "Ultra-realistic biological snake simulation with AI evolution."
+}

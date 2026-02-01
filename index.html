@@ -3,8 +3,27 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BioSnake: Ultra-Realistic Simulation</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>BioSnake | Ultra-Realistic Biological Simulation</title>
+    
+    <!-- Primary Meta Tags -->
+    <meta name="title" content="BioSnake | Ultra-Realistic Biological Simulation">
+    <meta name="description" content="An AI-powered, high-fidelity snake simulation with organic physics and procedural evolution.">
+    <meta name="theme-color" content="#0a0f0a">
+
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://biosnake.netlify.app/">
+    <meta property="og:title" content="BioSnake | Ultra-Realistic Biological Simulation">
+    <meta property="og:description" content="Experience organic physics and AI-driven evolution in this high-fidelity serpent simulator.">
+    <meta property="og:image" content="https://fonts.gstatic.com/s/i/short-term/release/googlesymbols/pet_supplies/default/48px.svg">
+
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image">
+    <meta property="twitter:title" content="BioSnake | Ultra-Realistic Biological Simulation">
+    <meta property="twitter:description" content="Experience organic physics and AI-driven evolution in this high-fidelity serpent simulator.">
+
+    <link rel="manifest" href="/manifest.json">
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
     <style>
@@ -15,9 +34,14 @@
             overflow: hidden;
             margin: 0;
             padding: 0;
+            touch-action: none;
         }
         canvas {
             image-rendering: auto;
+        }
+        ::selection {
+            background: #10b981;
+            color: white;
         }
     </style>
 <script type="importmap">
